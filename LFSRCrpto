@@ -1,0 +1,349 @@
+import java.util.*;
+
+public class LFSRCrypto {
+    
+    static class LFSR {
+        int[] flipFlops;
+        int[] taps;
+        int m;
+        int clockCount;
+        
+        public LFSR(int[] initialVector, int[] taps, int m) {
+            this.flipFlops = initialVector.clone();
+            this.taps = taps;
+            this.m = m;
+            this.clockCount = 0;
+        }
+        
+        public int getNextBit() {
+            clockCount++;
+            
+            int feedback = 0;
+            for (int i = 0; i < taps.length; i++) {
+                feedback = feedback ^ flipFlops[taps[i]];
+            }
+            
+            int output = flipFlops[m - 1];
+            
+            for (int i = m - 1; i > 0; i--) {
+                flipFlops[i] = flipFlops[i - 1];
+            }
+            
+            flipFlops[0] = feedback;
+            
+            return output;
+        }
+        
+        public void printState() {
+            System.out.print("Clock " + clockCount + ": [");
+            for (int i = 0; i < m; i++) {
+                System.out.print(flipFlops[i]);
+                if (i < m - 1) System.out.print(", ");
+            }
+            System.out.println("]");
+        }
+        
+        public int[] getState() {
+            return flipFlops.clone();
+        }
+        
+        public int[] getStateBefore() {
+            return flipFlops.clone();
+        }
+    }
+    
+    public static String textToBinary(String text) {
+        String result = "";
+        
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            int ascii = (int) c;
+            
+            String binary = Integer.toBinaryString(ascii);
+            
+            while (binary.length() < 8) {
+                binary = "0" + binary;
+            }
+            
+            result += binary;
+        }
+        
+        return result;
+    }
+    
+    public static String binaryToText(String binary) {
+        String result = "";
+        
+        for (int i = 0; i < binary.length(); i += 8) {
+            String chunk = binary.substring(i, i + 8);
+            int ascii = Integer.parseInt(chunk, 2);
+            char c = (char) ascii;
+            result += c;
+        }
+        
+        return result;
+    }
+    
+    public static int[] getTabsFromPolynomial(String poly, int m) {
+        poly = poly.toLowerCase().replace(" ", "");
+        List<Integer> tapList = new ArrayList<>();
+        
+        for (int i = 0; i < poly.length(); i++) {
+            if (poly.charAt(i) == 'x') {
+                
+                if (i + 1 < poly.length() && poly.charAt(i + 1) == '^') {
+                    String powerStr = "";
+                    int j = i + 2;
+                    
+                    while (j < poly.length() && Character.isDigit(poly.charAt(j))) {
+                        powerStr += poly.charAt(j);
+                        j++;
+                    }
+                    
+                    int power = Integer.parseInt(powerStr);
+                    
+                    if (power < m) {
+                        int position = m - power - 1;
+                        tapList.add(position);
+                    }
+                }
+                else {
+                    int position = m - 2;
+                    tapList.add(position);
+                }
+            }
+        }
+        
+        if (poly.contains("+1") || poly.endsWith("1")) {
+            tapList.add(m - 1);
+        }
+        
+        int[] taps = new int[tapList.size()];
+        for (int i = 0; i < tapList.size(); i++) {
+            taps[i] = tapList.get(i);
+        }
+        
+        return taps;
+    }
+    
+    public static String encrypt(String message, LFSR lfsr) {
+        System.out.println("\n========================================");
+        System.out.println("         ENCRYPTION PROCESS");
+        System.out.println("========================================\n");
+        
+        String messageBinary = textToBinary(message);
+        System.out.println("Original Message: \"" + message + "\"");
+        System.out.println("Message in Binary: " + messageBinary);
+        System.out.println("Total bits: " + messageBinary.length());
+        
+        System.out.println("\n--- Flip-Flop States and Encryption ---\n");
+        System.out.println("Clock | Flip-Flop State      | Output | Message | Encrypted");
+        System.out.println("------|---------------------|--------|---------|----------");
+        
+        String encryptedBinary = "";
+        
+        for (int i = 0; i < messageBinary.length(); i++) {
+            int messageBit = messageBinary.charAt(i) - '0';
+            
+            int[] stateBefore = lfsr.getStateBefore();
+            
+            int lfsrBit = lfsr.getNextBit();
+            
+            int encryptedBit = messageBit ^ lfsrBit;
+            encryptedBinary += encryptedBit;
+            
+            System.out.printf("%5d | ", lfsr.clockCount);
+            
+            int[] state = stateBefore;
+            System.out.print("[");
+            for (int j = 0; j < state.length; j++) {
+                System.out.print(state[j]);
+                if (j < state.length - 1) System.out.print(",");
+            }
+            System.out.print("]");
+            
+            int spaces = 19 - (state.length * 2 - 1);
+            for (int s = 0; s < spaces; s++) System.out.print(" ");
+            
+            System.out.printf("| %6d | %7d | %9d\n", lfsrBit, messageBit, encryptedBit);
+        }
+        
+        System.out.println("\n--- Encrypted Binary ---");
+        System.out.println(encryptedBinary);
+        
+        String encryptedText = binaryToText(encryptedBinary);
+        System.out.println("\n--- Encrypted Text (may be unreadable) ---");
+        System.out.println("\"" + encryptedText + "\"");
+        
+        return encryptedBinary;
+    }
+    
+    public static String decrypt(String encryptedBinary, LFSR lfsr) {
+        System.out.println("\n========================================");
+        System.out.println("         DECRYPTION PROCESS");
+        System.out.println("========================================\n");
+        
+        System.out.println("Encrypted Binary: " + encryptedBinary);
+        System.out.println("Total bits: " + encryptedBinary.length());
+        
+        System.out.println("\n--- Flip-Flop States and Decryption ---\n");
+        System.out.println("Clock | Flip-Flop State      | Output | Encrypted | Decrypted");
+        System.out.println("------|---------------------|--------|-----------|----------");
+        
+        String decryptedBinary = "";
+        
+        for (int i = 0; i < encryptedBinary.length(); i++) {
+            int encryptedBit = encryptedBinary.charAt(i) - '0';
+            
+            int[] stateBefore = lfsr.getStateBefore();
+            
+            int lfsrBit = lfsr.getNextBit();
+            
+            int decryptedBit = encryptedBit ^ lfsrBit;
+            decryptedBinary += decryptedBit;
+            
+            System.out.printf("%5d | ", lfsr.clockCount);
+            
+            int[] state = stateBefore;
+            System.out.print("[");
+            for (int j = 0; j < state.length; j++) {
+                System.out.print(state[j]);
+                if (j < state.length - 1) System.out.print(",");
+            }
+            System.out.print("]");
+            
+            int spaces = 19 - (state.length * 2 - 1);
+            for (int s = 0; s < spaces; s++) System.out.print(" ");
+            
+            System.out.printf("| %6d | %9d | %9d\n", lfsrBit, encryptedBit, decryptedBit);
+        }
+        
+        System.out.println("\n--- Decrypted Binary ---");
+        System.out.println(decryptedBinary);
+        
+        String decryptedText = binaryToText(decryptedBinary);
+        System.out.println("\n--- Decrypted Message ---");
+        System.out.println("\"" + decryptedText + "\"");
+        
+        return decryptedText;
+    }
+    
+    public static void checkPolynomialType(int[] taps, int m, int[] initialVector) {
+        System.out.println("\n========================================");
+        System.out.println("       POLYNOMIAL ANALYSIS");
+        System.out.println("========================================\n");
+        
+        LFSR testLFSR = new LFSR(initialVector, taps, m);
+        
+        int maxPeriod = (int) Math.pow(2, m) - 1;
+        
+        Set<String> seenStates = new HashSet<>();
+        String initialState = Arrays.toString(testLFSR.getState());
+        seenStates.add(initialState);
+        
+        int period = 0;
+        
+        for (int i = 0; i < maxPeriod + 1; i++) {
+            testLFSR.getNextBit();
+            String currentState = Arrays.toString(testLFSR.getState());
+            
+            if (seenStates.contains(currentState)) {
+                period = i + 1;
+                break;
+            }
+            
+            seenStates.add(currentState);
+        }
+        
+        System.out.println("Period found: " + period);
+        System.out.println("Maximum possible period (2^" + m + " - 1): " + maxPeriod);
+        
+        if (period == maxPeriod) {
+            System.out.println("\nPolynomial Type: PRIMITIVE");
+            System.out.println("(Maximum-length sequence - BEST for encryption)");
+        } else if (period < maxPeriod) {
+            System.out.println("\nPolynomial Type: REDUCIBLE");
+            System.out.println("(Short period - WEAK for encryption)");
+        } else {
+            System.out.println("\nPolynomial Type: IRREDUCIBLE");
+            System.out.println("(Not primitive but acceptable)");
+        }
+    }
+    
+    public static void main(String[] args) {
+        Scanner input = new Scanner(System.in);
+        
+        System.out.println("╔════════════════════════════════════════╗");
+        System.out.println("║   LFSR Encryption & Decryption System  ║");
+        System.out.println("╚════════════════════════════════════════╝\n");
+        
+        System.out.print("Enter your message: ");
+        String message = input.nextLine();
+        
+        System.out.print("Enter m value (2-9): ");
+        int m = input.nextInt();
+        input.nextLine();
+        
+        if (m < 2 || m > 9) {
+            System.out.println("Error: m must be between 2 and 9!");
+            input.close();
+            return;
+        }
+        
+        System.out.print("Enter polynomial p(x) (example: x^4+x+1): ");
+        String polynomial = input.nextLine();
+        
+        int[] taps = getTabsFromPolynomial(polynomial, m);
+        System.out.println("Tap positions: " + Arrays.toString(taps));
+        
+        System.out.print("Enter initial vector (" + m + " binary digits): ");
+        String ivString = input.nextLine();
+        
+        if (ivString.length() != m) {
+            System.out.println("Error: Initial vector must have " + m + " bits!");
+            input.close();
+            return;
+        }
+        
+        int[] initialVector = new int[m];
+        boolean allZeros = true;
+        for (int i = 0; i < m; i++) {
+            initialVector[i] = ivString.charAt(i) - '0';
+            if (initialVector[i] == 1) {
+                allZeros = false;
+            }
+        }
+
+        if (allZeros) {
+            System.out.println("Error: Initial vector cannot be all zeros!");
+            input.close();
+            return;
+        }
+        
+        System.out.println("Initial vector: " + Arrays.toString(initialVector));
+        
+        checkPolynomialType(taps, m, initialVector);
+        
+        LFSR encryptLFSR = new LFSR(initialVector, taps, m);
+        
+        String encryptedBinary = encrypt(message, encryptLFSR);
+        
+        LFSR decryptLFSR = new LFSR(initialVector, taps, m);
+        
+        String decryptedMessage = decrypt(encryptedBinary, decryptLFSR);
+        
+        System.out.println("\n========================================");
+        System.out.println("           VERIFICATION");
+        System.out.println("========================================\n");
+        System.out.println("Original Message:  \"" + message + "\"");
+        System.out.println("Decrypted Message: \"" + decryptedMessage + "\"");
+        
+        if (message.equals(decryptedMessage)) {
+            System.out.println("\n✓ SUCCESS! Encryption and Decryption work correctly!");
+        } else {
+            System.out.println("\n✗ FAILED! Something went wrong!");
+        }
+        
+        input.close();
+    }
+}
