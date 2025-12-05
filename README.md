@@ -12,7 +12,7 @@ Intentionally kept minimal and easy to understand — great for students, beginn
 
 | Algorithm              | Type                  | File                          | Notes                                 |
 |------------------------|-----------------------|-------------------------------|---------------------------------------|
-| LSRF                   | Stream cipher         | `LSRF.java`                   | Stream Block Encyption                |
+| LFSR                   | Stream cipher         | `LSRF.java`                   | Stream Block Encyption                |
 | DES (simplified)       | Symmetric (Block)     | `SimpleDES.java`              | For learning purposes                 |
 | AES (simple version)   | Symmetric (Block)     | `SimpleAES.java`              | Educational, not for production       |
 | RSA                    | Asymmetric            | `RSA.java`                    | Key generation + encrypt/decrypt      |
