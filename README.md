@@ -23,7 +23,6 @@ Coming SOON !
 | SHA-256                | Hash Function         | `SHA256.java`                 | From scratch implementation           |
 | MD5                    | Hash Function         | `MD5.java`                    | Pure Java, educational only           |
 
-*(Add or remove rows as you actually have the files)*
 
 ## Why this repository exists
 - Learn how cryptographic primitives actually work
