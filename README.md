@@ -12,14 +12,16 @@ Intentionally kept minimal and easy to understand — great for students, beginn
 
 | Algorithm              | Type                  | File                          | Notes                                 |
 |------------------------|-----------------------|-------------------------------|---------------------------------------|
-| Caesar Cipher          | Symmetric             | `CaesarCipher.java`           | Classic shift cipher                  |
-| Vigenère Cipher        | Symmetric             | `VigenereCipher.java`         | Poly-alphabetic substitution          |
+| LSRF                   | Stream cipher         | `LSRF.java`                   | Stream Block Encyption                |
+| DES (simplified)       | Symmetric (Block)     | `SimpleDES.java`              | For learning purposes                 |
 | AES (simple version)   | Symmetric (Block)     | `SimpleAES.java`              | Educational, not for production       |
 | RSA                    | Asymmetric            | `RSA.java`                    | Key generation + encrypt/decrypt      |
+Coming SOON !
+| Caesar Cipher          | Symmetric             | `CaesarCipher.java`           | Classic shift cipher                  |
+| Vigenère Cipher        | Symmetric             | `VigenereCipher.java`         | Poly-alphabetic substitution          |
 | Diffie-Hellman         | Key Exchange          | `DiffieHellman.java`          | Simple demo with small primes         |
 | SHA-256                | Hash Function         | `SHA256.java`                 | From scratch implementation           |
 | MD5                    | Hash Function         | `MD5.java`                    | Pure Java, educational only           |
-| DES (simplified)       | Symmetric (Block)     | `SimpleDES.java`              | For learning purposes                 |
 
 *(Add or remove rows as you actually have the files)*
 
