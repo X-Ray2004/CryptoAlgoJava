@@ -1,0 +1,215 @@
+import java.util.*;
+import java.math.BigInteger;
+
+public class RSAImplementation {
+    
+    // Square and Multiply Algorithm for modular exponentiation
+    public static long squareAndMultiply(long base, long exp, long mod) {
+        long result = 1;
+        base = base % mod;
+        
+        while (exp > 0) {
+            if (exp % 2 == 1) {
+                result = (result * base) % mod;
+            }
+            exp = exp >> 1;
+            base = (base * base) % mod;
+        }
+        return result;
+    }
+    
+    // Fermat Primality Test
+    public static boolean fermatPrimalityTest(long n, int iterations) {
+        if (n <= 1) return false;
+        if (n <= 3) return true;
+        if (n % 2 == 0) return false;
+        
+        Random rand = new Random();
+        for (int i = 0; i < iterations; i++) {
+            long a = 2 + (long)(rand.nextDouble() * (n - 3));
+            if (squareAndMultiply(a, n - 1, n) != 1) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    // Generate random prime number in range (X, 2^15-1)
+    public static long generatePrime(long lowerBound) {
+        Random rand = new Random();
+        long upperBound = (1L << 15) - 1; // 2^15 - 1 = 32767
+        long prime;
+        
+        do {
+            prime = lowerBound + 1 + (long)(rand.nextDouble() * (upperBound - lowerBound - 1));
+        } while (!fermatPrimalityTest(prime, 100));
+        
+        return prime;
+    }
+    
+    // Extended Euclidean Algorithm
+    public static long[] extendedEuclid(long a, long b) {
+        if (b == 0) {
+            return new long[]{a, 1, 0};
+        }
+        
+        long[] result = extendedEuclid(b, a % b);
+        long gcd = result[0];
+        long x1 = result[1];
+        long y1 = result[2];
+        
+        long x = y1;
+        long y = x1 - (a / b) * y1;
+        
+        return new long[]{gcd, x, y};
+    }
+    
+    // Compute modular inverse using Extended Euclidean Algorithm
+    public static long modInverse(long e, long phi) {
+        long[] result = extendedEuclid(e, phi);
+        long d = result[1];
+        
+        if (d < 0) {
+            d = (d % phi + phi) % phi;
+        }
+        return d;
+    }
+    
+    // Select e (public exponent)
+    public static long selectE(long phi) {
+        long e = 3;
+        while (e < phi) {
+            long[] result = extendedEuclid(e, phi);
+            if (result[0] == 1) { // gcd(e, phi) = 1
+                return e;
+            }
+            e += 2;
+        }
+        return e;
+    }
+    
+    // RSA Key Generation for a character
+    public static class RSAKeys {
+        long p, q, n, phi, e, d;
+        
+        public RSAKeys(long x) {
+            // Step 1: Select two prime numbers p, q
+            p = generatePrime(x);
+            q = generatePrime(x);
+            while (p == q) {
+                q = generatePrime(x);
+            }
+            
+            // Step 2: Compute n
+            n = p * q;
+            
+            // Step 3: Compute phi(n)
+            phi = (p - 1) * (q - 1);
+            
+            // Step 4: Select e
+            e = selectE(phi);
+            
+            // Step 5: Compute d using Extended Euclidean Algorithm
+            d = modInverse(e, phi);
+        }
+    }
+    
+    // RSA Encryption
+    public static long encrypt(long plaintext, long e, long n) {
+        return squareAndMultiply(plaintext, e, n);
+    }
+    
+    // RSA Decryption with CRT
+    public static long decryptCRT(long ciphertext, RSAKeys keys) {
+        // Step 1: Transformation into CRT domain
+        long yp = ciphertext % keys.p;
+        long yq = ciphertext % keys.q;
+        
+        // Step 2: Computation in CRT domain
+        long dp = keys.d % (keys.p - 1);
+        long dq = keys.d % (keys.q - 1);
+        
+        long xp = squareAndMultiply(yp, dp, keys.p);
+        long xq = squareAndMultiply(yq, dq, keys.q);
+        
+        // Step 3: Inverse transformation
+        long cp = modInverse(keys.q, keys.p);
+        long cq = modInverse(keys.p, keys.q);
+        
+        long x = ((xp * keys.q * cp) + (xq * keys.p * cq)) % keys.n;
+        
+        if (x < 0) {
+            x = (x % keys.n + keys.n) % keys.n;
+        }
+        
+        return x;
+    }
+    
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        
+        System.out.println("=== RSA Encryption/Decryption Implementation ===\n");
+        System.out.print("Enter plaintext: ");
+        String plaintext = scanner.nextLine();
+        
+        System.out.println("\n--- Processing Each Character ---\n");
+        
+        StringBuilder ciphertext = new StringBuilder();
+        List<RSAKeys> keysList = new ArrayList<>();
+        List<Long> ciphertextValues = new ArrayList<>();
+        
+        for (int i = 0; i < plaintext.length(); i++) {
+            char c = plaintext.charAt(i);
+            long x = (long) c; // ASCII value
+            
+            System.out.println("Character: '" + c + "' (ASCII: " + x + ")");
+            
+            // Generate keys for this character
+            RSAKeys keys = new RSAKeys(x);
+            keysList.add(keys);
+            
+            // Display generated keys
+            System.out.println("  p = " + keys.p);
+            System.out.println("  q = " + keys.q);
+            System.out.println("  n = " + keys.n);
+            System.out.println("  phi(n) = " + keys.phi);
+            System.out.println("  e (public key) = " + keys.e);
+            System.out.println("  d (private key) = " + keys.d);
+            
+            // Encrypt
+            long cipher = encrypt(x, keys.e, keys.n);
+            ciphertextValues.add(cipher);
+            System.out.println("  Ciphertext: " + cipher);
+            
+            System.out.println();
+        }
+        
+        System.out.println("\n--- Decryption Phase ---\n");
+        
+        StringBuilder decryptedText = new StringBuilder();
+        
+        for (int i = 0; i < ciphertextValues.size(); i++) {
+            long cipher = ciphertextValues.get(i);
+            RSAKeys keys = keysList.get(i);
+            
+            // Decrypt using CRT
+            long decrypted = decryptCRT(cipher, keys);
+            char decryptedChar = (char) decrypted;
+            decryptedText.append(decryptedChar);
+            
+            System.out.println("Ciphertext: " + cipher + " -> Decrypted: " + decrypted + " ('" + decryptedChar + "')");
+        }
+        
+        System.out.println("\n=== Results ===");
+        System.out.println("Original Plaintext:  " + plaintext);
+        System.out.println("Decrypted Plaintext: " + decryptedText.toString());
+        
+        if (plaintext.equals(decryptedText.toString())) {
+            System.out.println("\n✓ Decryption successful!");
+        } else {
+            System.out.println("\n✗ Decryption failed!");
+        }
+        
+        scanner.close();
+    }
+}
